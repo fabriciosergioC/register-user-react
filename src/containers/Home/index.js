@@ -1,7 +1,7 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 
-// Removido axios temporariamente para usar localStorage
-// import axios from "axios";
+// Importar serviço do MongoDB
+import mongoService from "../../services/mongoService";
 
 import People from "../../imagens/people.svg"
 import Seta from "../../imagens/setaDireita.svg"
@@ -20,9 +20,10 @@ import {
 function Home() { 
 
   const inputName = useRef()
-  const inputAge =  useRef()
+  const inputAge = useRef()
+  const [isLoading, setIsLoading] = useState(false)
 
-function addUser(){
+async function addUser(){
   // Validação dos campos
   const name = inputName.current.value.trim();
   const age = inputAge.current.value.trim();
@@ -32,28 +33,49 @@ function addUser(){
     return;
   }
   
-  // Criar novo usuário
-  const newUser = {
-    id: Date.now(), // ID simples baseado no timestamp
-    name: name,
-    age: parseInt(age)
-  };
+  if (isNaN(age) || age < 1 || age > 120) {
+    alert('Por favor, insira uma idade válida (1-120)!');
+    return;
+  }
   
-  // Buscar usuários existentes do localStorage
-  const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+  setIsLoading(true);
   
-  // Adicionar novo usuário
-  const updatedUsers = [...existingUsers, newUser];
+  try {
+    // Criar usuário no MongoDB
+    const newUser = await mongoService.createUser({
+      name: name,
+      age: parseInt(age)
+    });
+    
+    // Limpar campos
+    inputName.current.value = '';
+    inputAge.current.value = '';
+    
+    // Feedback visual
+    alert(`Usuário ${newUser.name} cadastrado com sucesso no MongoDB!`);
+    
+  } catch (error) {
+    console.error('Erro ao cadastrar usuário:', error);
+    
+    // Fallback para localStorage se MongoDB falhar
+    const fallbackUser = {
+      id: Date.now(),
+      name: name,
+      age: parseInt(age)
+    };
+    
+    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = [...existingUsers, fallbackUser];
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    
+    // Limpar campos
+    inputName.current.value = '';
+    inputAge.current.value = '';
+    
+    alert('Usuário cadastrado localmente (MongoDB não disponível)!');
+  }
   
-  // Salvar no localStorage
-  localStorage.setItem('users', JSON.stringify(updatedUsers));
-  
-  // Limpar campos
-  inputName.current.value = '';
-  inputAge.current.value = '';
-  
-  // Feedback visual
-  alert('Usuário cadastrado com sucesso!');
+  setIsLoading(false);
 }
 
   return (
@@ -70,9 +92,9 @@ function addUser(){
         <NomeInput>Idade</NomeInput>
         <Imput ref={inputAge} placeholder="Idade" />
 
-        <Button  to = "/usuarios" onClick={addUser}>
-          Cadastrar <img alt="seta" src={Seta}/>
-          </Button>        
+        <Button to="/usuarios" onClick={addUser} disabled={isLoading}>
+          {isLoading ? 'Salvando...' : 'Cadastrar'} <img alt="seta" src={Seta}/>
+        </Button>        
 
       </ContainerSecundario>
     </Container>
