@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-// Importar serviço do MongoDB
-import mongoService from "../../services/mongoService";
+// Usar backend API
+import axios from "axios";
 
 import People1 from "../../imagens/people1.svg"
 import Seta from "../../imagens/setaEsquerda.png"
@@ -23,20 +23,50 @@ function Users() {
 
   useEffect(() => {
     async function carregarUsers() {
+      console.log('🔄 Iniciando carregamento de usuários...');
       setIsLoading(true);
       
       try {
-        // Tentar buscar do MongoDB primeiro
-        const mongoUsers = await mongoService.getUsers();
-        setUser(mongoUsers);
-        console.log('Usuários carregados do MongoDB:', mongoUsers.length);
+        // Tentar buscar da API primeiro
+        console.log('📡 Tentando buscar da API MongoDB...');
+        const response = await axios.get('http://localhost:3001/api/users');
+        
+        console.log('📊 Resposta completa da API:', response);
+        console.log('📊 Status da resposta:', response.status);
+        console.log('📊 Dados da resposta:', response.data);
+        
+        if (response.data.success && response.data.data) {
+          setUser(response.data.data);
+          console.log('✅ Usuários carregados do MongoDB:', response.data.data);
+          console.log('📊 Total de usuários no MongoDB:', response.data.data.length);
+          setIsLoading(false);
+          return; // Sair se API funcionou
+        } else {
+          throw new Error('API retornou dados inválidos');
+        }
         
       } catch (error) {
-        console.error('Erro ao carregar do MongoDB, usando localStorage:', error);
+        console.error('❌ Erro completo ao carregar da API:', error);
+        console.error('❌ Erro response:', error.response);
+        console.error('❌ Erro message:', error.message);
         
-        // Fallback para localStorage se MongoDB falhar
-        const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        setUser(savedUsers);
+        // Se for erro de rede
+        if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+          console.log('🚫 Erro de rede - Backend pode estar offline');
+        }
+        
+        console.log('💾 Tentando carregar do localStorage como fallback...');
+        
+        // Fallback para localStorage se API falhar
+        try {
+          const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+          console.log('📦 Dados do localStorage:', savedUsers);
+          setUser(savedUsers);
+          console.log('⚠️ Usuários carregados do localStorage:', savedUsers.length);
+        } catch (localError) {
+          console.error('❌ Erro no localStorage:', localError);
+          setUser([]);
+        }
       }
       
       setIsLoading(false);
@@ -47,24 +77,33 @@ function Users() {
 
   async function deleteUser(userId) {
     try {
-      // Tentar deletar do MongoDB
-      await mongoService.deleteUser(userId);
+      // Tentar deletar da API primeiro
+      const response = await axios.delete(`http://localhost:3001/api/users/${userId}`);
       
-      // Atualizar estado local
-      const updatedUsers = users.filter((user) => user._id !== userId);
-      setUser(updatedUsers);
-      
-      alert('Usuário removido do MongoDB com sucesso!');
+      if (response.data.success) {
+        // Atualizar estado local removendo o usuário
+        const updatedUsers = users.filter((user) => user._id !== userId);
+        setUser(updatedUsers);
+        
+        alert('Usuário removido da API com sucesso!');
+      } else {
+        throw new Error(response.data.message || 'Erro ao deletar');
+      }
       
     } catch (error) {
-      console.error('Erro ao deletar do MongoDB, usando localStorage:', error);
+      console.error('Erro ao deletar da API, usando localStorage:', error);
       
-      // Fallback para localStorage
-      const updatedUsers = users.filter((user) => user.id !== userId);
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      setUser(updatedUsers);
-      
-      alert('Usuário removido localmente!');
+      try {
+        // Fallback para localStorage
+        const updatedUsers = users.filter((user) => user.id !== userId);
+        localStorage.setItem('users', JSON.stringify(updatedUsers));
+        setUser(updatedUsers);
+        
+        alert('Usuário removido localmente!');
+      } catch (localError) {
+        console.error('Erro no localStorage:', localError);
+        alert('Erro ao remover usuário. Tente novamente.');
+      }
     }
   }
 
