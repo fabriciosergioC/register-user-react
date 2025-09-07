@@ -51,7 +51,7 @@ async function addUser(){
     console.log('🚀 Tentando enviar para MongoDB via API...');
     
     // Enviar para backend API
-    const response = await axios.post('http://localhost:3001/api/users', {
+    const response = await axios.post('/api/users', {
       name: name,
       age: parseInt(age)
     });

@@ -29,7 +29,7 @@ function Users() {
       try {
         // Tentar buscar da API primeiro
         console.log('📡 Tentando buscar da API MongoDB...');
-        const response = await axios.get('http://localhost:3001/api/users');
+        const response = await axios.get('/api/users');
         
         console.log('📊 Resposta completa da API:', response);
         console.log('📊 Status da resposta:', response.status);
@@ -78,7 +78,7 @@ function Users() {
   async function deleteUser(userId) {
     try {
       // Tentar deletar da API primeiro
-      const response = await axios.delete(`http://localhost:3001/api/users/${userId}`);
+      const response = await axios.delete(`/api/users/${userId}`);
       
       if (response.data.success) {
         // Atualizar estado local removendo o usuário

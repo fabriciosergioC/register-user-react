@@ -19,8 +19,11 @@ let isMongoConnected = false;
 
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI || 
-      'mongodb+srv://root:35160354@cluster0.hd5jrlg.mongodb.net/register-users?retryWrites=true&w=majority&appName=Cluster0';
+    const mongoURI = process.env.MONGODB_URI;
+    
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI não definida nas variáveis de ambiente');
+    }
     
     console.log('🔄 Tentando conectar ao MongoDB Atlas...');
     
@@ -301,7 +304,13 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
-// Health check
+// Health check - Para Docker
+app.get('/health', (req, res) => {
+  const mongoStatus = isMongoConnected && mongoose.connection.readyState === 1;
+  res.status(200).json({ status: 'ok', database: mongoStatus });
+});
+
+// Health check detalhado - Para API
 app.get('/api/health', (req, res) => {
   const mongoStatus = isMongoConnected && mongoose.connection.readyState === 1 ? 'Conectado' : 'Desconectado';
   
