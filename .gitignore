@@ -69,8 +69,11 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# Docker
-.dockerignore
+# Docker (allow necessary .dockerignore files)
+# .dockerignore files are needed for proper Docker builds
+!.dockerignore
+!backend/.dockerignore
+!*/.dockerignore
 
 # IDE files
 .vscode/
