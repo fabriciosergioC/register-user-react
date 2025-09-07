@@ -47,8 +47,45 @@ async function addUser(){
   
   setIsLoading(true);
   
+  // Detectar se está no Railway (ambiente de produção)
+  const isRailwayProduction = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+  
+  if (isRailwayProduction) {
+    console.log('🚂 Detectado Railway - usando localStorage apenas');
+    
+    // Usar localStorage no Railway
+    const newUser = {
+      id: Date.now(),
+      name: name,
+      age: parseInt(age),
+      createdAt: new Date().toISOString()
+    };
+    
+    try {
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const updatedUsers = [...existingUsers, newUser];
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      
+      // Limpar campos
+      if (inputName.current && inputAge.current) {
+        inputName.current.value = '';
+        inputAge.current.value = '';
+      }
+      
+      alert(`✅ Usuário ${newUser.name} cadastrado com sucesso!`);
+      console.log('✅ Usuário salvo no localStorage:', newUser);
+    } catch (error) {
+      console.error('❌ Erro ao salvar no localStorage:', error);
+      alert('❌ Erro ao salvar usuário. Tente novamente.');
+    }
+    
+    setIsLoading(false);
+    return;
+  }
+  
+  // Código original para desenvolvimento local com backend
   try {
-    console.log('🚀 Tentando enviar para MongoDB via API...');
+    console.log('🚀 Ambiente local - tentando enviar para MongoDB via API...');
     
     // Enviar para backend API
     const response = await axios.post('/api/users', {
@@ -84,30 +121,9 @@ async function addUser(){
       return;
     }
     
-    // Se for erro de rede, mostrar detalhes
-    if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
-      alert('❌ Erro de conexão! Verifique se o backend está rodando na porta 3001.');
-      setIsLoading(false);
-      return;
-    }
-    
-    // Se for erro CORS
-    if (error.message.includes('CORS')) {
-      alert('❌ Erro de CORS! Verifique a configuração do backend.');
-      setIsLoading(false);
-      return;
-    }
-    
-    // Se for erro específico da API
-    if (error.response && error.response.data) {
-      alert(`❌ Erro da API: ${error.response.data.message}`);
-      setIsLoading(false);
-      return;
-    }
-    
     console.log('💾 Backend indisponível. Usando localStorage como fallback...');
     
-    // Só usar localStorage como último recurso
+    // Fallback para localStorage
     const fallbackUser = {
       id: Date.now(),
       name: name,

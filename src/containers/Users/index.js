@@ -26,9 +26,31 @@ function Users() {
       console.log('🔄 Iniciando carregamento de usuários...');
       setIsLoading(true);
       
+      // Detectar se está no Railway (ambiente de produção)
+      const isRailwayProduction = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+      
+      if (isRailwayProduction) {
+        console.log('🚂 Detectado Railway - usando localStorage apenas');
+        
+        // Usar localStorage no Railway
+        try {
+          const savedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+          console.log('📦 Dados do localStorage (Railway):', savedUsers);
+          setUser(savedUsers);
+          console.log('✅ Usuários carregados do localStorage (Railway):', savedUsers.length);
+        } catch (localError) {
+          console.error('❌ Erro no localStorage (Railway):', localError);
+          setUser([]);
+        }
+        
+        setIsLoading(false);
+        return;
+      }
+      
+      // Código original para desenvolvimento local com backend
       try {
         // Tentar buscar da API primeiro
-        console.log('📡 Tentando buscar da API MongoDB...');
+        console.log('📡 Ambiente local - tentando buscar da API MongoDB...');
         const response = await axios.get('/api/users');
         
         console.log('📊 Resposta completa da API:', response);
@@ -76,8 +98,31 @@ function Users() {
   }, [])
 
   async function deleteUser(userId) {
+    // Detectar se está no Railway (ambiente de produção)
+    const isRailwayProduction = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+    
+    if (isRailwayProduction) {
+      console.log('🚂 Detectado Railway - usando localStorage para deletar');
+      
+      try {
+        // Deletar do localStorage no Railway
+        const updatedUsers = users.filter((user) => user.id !== userId);
+        localStorage.setItem('users', JSON.stringify(updatedUsers));
+        setUser(updatedUsers);
+        
+        alert('✅ Usuário removido com sucesso!');
+        console.log('✅ Usuário removido do localStorage (Railway)');
+      } catch (localError) {
+        console.error('❌ Erro ao deletar do localStorage (Railway):', localError);
+        alert('❌ Erro ao remover usuário. Tente novamente.');
+      }
+      return;
+    }
+    
+    // Código original para desenvolvimento local com backend
     try {
       // Tentar deletar da API primeiro
+      console.log('🗑️ Ambiente local - tentando deletar da API MongoDB...');
       const response = await axios.delete(`/api/users/${userId}`);
       
       if (response.data.success) {
@@ -85,13 +130,13 @@ function Users() {
         const updatedUsers = users.filter((user) => user._id !== userId);
         setUser(updatedUsers);
         
-        alert('Usuário removido da API com sucesso!');
+        alert('✅ Usuário removido da API com sucesso!');
       } else {
         throw new Error(response.data.message || 'Erro ao deletar');
       }
       
     } catch (error) {
-      console.error('Erro ao deletar da API, usando localStorage:', error);
+      console.error('❌ Erro ao deletar da API, usando localStorage:', error);
       
       try {
         // Fallback para localStorage
@@ -99,10 +144,10 @@ function Users() {
         localStorage.setItem('users', JSON.stringify(updatedUsers));
         setUser(updatedUsers);
         
-        alert('Usuário removido localmente!');
+        alert('⚠️ Usuário removido localmente (API indisponível)!');
       } catch (localError) {
-        console.error('Erro no localStorage:', localError);
-        alert('Erro ao remover usuário. Tente novamente.');
+        console.error('❌ Erro no localStorage:', localError);
+        alert('❌ Erro ao remover usuário. Tente novamente.');
       }
     }
   }
